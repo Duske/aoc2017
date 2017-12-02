@@ -6,18 +6,15 @@ main :: IO ()
 main = do
   input <- readFile "input.txt"
   let linesOfFiles = lines input
-  let rows = map makeRowToItems linesOfFiles
+  let rows = map makeLineToRow linesOfFiles
   putStr $ show $ computeCheckSum rows
 
-
-computeCheckSum :: [[String]] -> Integer
+computeCheckSum :: [[Int]] -> Int
 computeCheckSum rows = sum $ map computeCheckSumForRow rows
 
-computeCheckSumForRow :: [String] -> Integer
-computeCheckSumForRow row =
-  let intRow = map (\x -> read x :: Integer ) row
-  -- here's where the magic happens
-  in head [div x y | x <- intRow, y <- intRow, x `mod` y == 0 , x > y ]
+computeCheckSumForRow :: [Int] -> Int
+computeCheckSumForRow row = head [div x y | x <- row, y <- row, x `mod` y == 0 , x > y ]
 
-makeRowToItems :: String -> [String]
-makeRowToItems string = R.splitRegex (R.mkRegex "\t") string
+makeLineToRow :: String -> [Int]
+makeLineToRow string = map (\x -> read x :: Int ) stringRow
+  where stringRow =  R.splitRegex (R.mkRegex "\t") string
