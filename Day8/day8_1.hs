@@ -7,7 +7,8 @@ module Day8_1 where
 import Data.Map
 import Data.Maybe
 
-data Instruction = Instruction String Int (Int -> Int) (Map String Instruction -> Bool)
+data Instruction = Instruction String Int (Int -> Int) (RegisterList -> Bool)
+type RegisterList = Map String Instruction
 
 main :: IO ()
 main = do
@@ -16,24 +17,23 @@ main = do
   let instructions = Prelude.map createInstruction linesofRawInstruction
   let dic = Data.Map.fromList instructions
   let newDic = compute dic
-  putStr $ show $  maxDic newDic
+  putStr $ show $  maxDict newDic
 
-maxDic dic = Data.Map.foldl check 0 dic
-  where
-    check acc (Instruction _ value _ _ ) = if acc > value then acc else value
+maxDict :: RegisterList -> Int
+maxDict dic = maximum $ Data.Map.map getVal dic
 
-compute :: Map String Instruction -> Map String Instruction
-compute dic = Data.Map.foldl func dic dic
+compute :: RegisterList -> RegisterList
+compute dic = Data.Map.foldl' func dic dic
   where
-    func dicAcc (Instruction key _ stmt cond)  = if cond dicAcc then Data.Map.adjust (newInstruction stmt) key dicAcc else dicAcc
-    newInstruction op (Instruction key value stmt cond) = Instruction key (op value) stmt cond
+    func dicAcc (Instruction key value stmt cond)  = if cond dicAcc then Data.Map.adjust (const (Instruction key (stmt value) stmt cond)) key dicAcc else dicAcc
+    --newInstruction op (Instruction key value stmt cond) = Instruction key (op value) stmt cond
 
 createInstruction :: [String] -> (String, Instruction)
 createInstruction [key, action, value, _, dicKey, cmp, cmpVal] = (key, Instruction key 0 stmt cond)
   where
     cond = createCondition dicKey cmp (read cmpVal :: Int)
     stmt = createStmt action (read value :: Int)
-createInstruction _ = ("", Instruction "" 0 id (const False))
+createInstruction _ = error "Invalid inst"
 
 getVal :: Instruction -> Int
 getVal (Instruction _ value _ _) = value
@@ -41,13 +41,13 @@ getVal (Instruction _ value _ _) = value
 createStmt :: String -> Int -> Int -> Int
 createStmt "inc" value val = val + value
 createStmt "dec" value val = val - value
-createStmt _ _ _ = 0
+createStmt _ _ _ = error "Invalid Statement"
 
-createCondition :: String -> String -> Int -> Map String Instruction -> Bool
+createCondition :: String -> String -> Int -> RegisterList -> Bool
 createCondition dicKey ">" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary > cmpVal
 createCondition dicKey "<" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary < cmpVal
 createCondition dicKey "==" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary == cmpVal
 createCondition dicKey "!=" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary /= cmpVal
 createCondition dicKey "<=" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary <= cmpVal
 createCondition dicKey ">=" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary >= cmpVal
-createCondition _ _ _ _ = False
+createCondition _ _ _ _ = error "Invalid condition"
