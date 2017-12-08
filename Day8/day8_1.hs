@@ -1,53 +1,54 @@
--- create dic from first string before " "
--- parse actions
--- parse condition = create a function which accepts a dic, set the value like "f" in there
-
 module Day8_1 where
 
 import Data.Map
-import Data.Maybe
+import Data.List
 
-data Instruction = Instruction String Int (Int -> Int) (RegisterList -> Bool)
+data Instruction = Instruction String String Int (Int -> Int) (Int -> Bool)
 type RegisterList = Map String Instruction
 
 main :: IO ()
 main = do
   input <- readFile "input.txt"
-  let linesofRawInstruction = Prelude.map words $ lines input
-  let instructions = Prelude.map createInstruction linesofRawInstruction
-  let dic = Data.Map.fromList instructions
-  let newDic = compute dic
-  putStr $ show $  maxDict newDic
+  let instructions = (Prelude.map (createInstruction . words) . lines) input
+  let registerDict = doInstructions instructions Data.Map.empty
+  putStr $ show $ maxDict registerDict
 
 maxDict :: RegisterList -> Int
 maxDict dic = maximum $ Data.Map.map getVal dic
 
-compute :: RegisterList -> RegisterList
-compute dic = Data.Map.foldl' func dic dic
-  where
-    func dicAcc (Instruction key value stmt cond)  = if cond dicAcc then Data.Map.adjust (const (Instruction key (stmt value) stmt cond)) key dicAcc else dicAcc
-    --newInstruction op (Instruction key value stmt cond) = Instruction key (op value) stmt cond
+doInstructions :: [Instruction] -> RegisterList -> RegisterList
+doInstructions flines regs = Data.List.foldl' doInstruction regs flines
 
-createInstruction :: [String] -> (String, Instruction)
-createInstruction [key, action, value, _, dicKey, cmp, cmpVal] = (key, Instruction key 0 stmt cond)
+doInstruction :: RegisterList -> Instruction -> RegisterList
+doInstruction regs (Instruction key cmpReg _ updt cond)
+  | cond cmpRegValue = Data.Map.insert key (Instruction key cmpReg (updt currentValue) updt cond) regs
+  | otherwise = regs
   where
-    cond = createCondition dicKey cmp (read cmpVal :: Int)
-    stmt = createStmt action (read value :: Int)
+    cmpRegValue = maybe 0 getVal $ Data.Map.lookup cmpReg regs
+    currentValue = maybe 0 getVal $ Data.Map.lookup key regs
+
+-- For each line, create an Instruction containing the key, the regKey for the condition,
+-- the value, the update statement and the condition for the regKey register
+createInstruction :: [String] -> Instruction
+createInstruction [key, action, value, _, cmpReg, op, cmpVal] = Instruction key cmpReg 0 updt cond
+  where
+    cond = createCondition op (read cmpVal :: Int)
+    updt = createUpdt action (read value :: Int)
 createInstruction _ = error "Invalid inst"
 
 getVal :: Instruction -> Int
-getVal (Instruction _ value _ _) = value
+getVal (Instruction _ _ value _ _) = value
 
-createStmt :: String -> Int -> Int -> Int
-createStmt "inc" value val = val + value
-createStmt "dec" value val = val - value
-createStmt _ _ _ = error "Invalid Statement"
+createUpdt :: String -> Int -> Int -> Int
+createUpdt "inc" value val = val + value
+createUpdt "dec" value val = val - value
+createUpdt _ _ _ = error "Invalid Statement"
 
-createCondition :: String -> String -> Int -> RegisterList -> Bool
-createCondition dicKey ">" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary > cmpVal
-createCondition dicKey "<" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary < cmpVal
-createCondition dicKey "==" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary == cmpVal
-createCondition dicKey "!=" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary /= cmpVal
-createCondition dicKey "<=" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary <= cmpVal
-createCondition dicKey ">=" cmpVal dictionary = (getVal . fromJust . Data.Map.lookup dicKey) dictionary >= cmpVal
-createCondition _ _ _ _ = error "Invalid condition"
+createCondition :: String -> Int -> Int -> Bool
+createCondition ">" cmpVal = flip (>) cmpVal
+createCondition "<" cmpVal = flip (<) cmpVal
+createCondition "==" cmpVal = (==) cmpVal
+createCondition "!=" cmpVal = (/=) cmpVal
+createCondition "<=" cmpVal = flip (<=) cmpVal
+createCondition ">=" cmpVal = flip (>=) cmpVal
+createCondition _ _ = error "Invalid condition"
