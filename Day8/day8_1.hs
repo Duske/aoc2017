@@ -11,13 +11,18 @@ main = do
   input <- readFile "input.txt"
   let instructions = (Prelude.map (createInstruction . words) . lines) input
   let registerDict = doInstructions instructions Data.Map.empty
+  let registerDict2 = doInstructionsB instructions Data.Map.empty
   putStr $ show $ maxDict registerDict
+  putStr $ show $ maximum $ Data.List.map maxDict registerDict2
 
 maxDict :: RegisterList -> Int
 maxDict dic = maximum $ Data.Map.map getVal dic
 
 doInstructions :: [Instruction] -> RegisterList -> RegisterList
 doInstructions flines regs = Data.List.foldl' doInstruction regs flines
+
+doInstructionsB :: [Instruction] -> RegisterList -> [RegisterList]
+doInstructionsB flines regs = Data.List.scanl doInstruction regs flines
 
 doInstruction :: RegisterList -> Instruction -> RegisterList
 doInstruction regs (Instruction key cmpReg _ updt cond)
