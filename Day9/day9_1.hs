@@ -7,8 +7,8 @@ main = do
   putStr $ show $ calc input 0 0 False
 
 calc :: String -> Int -> Int -> Bool -> Int
-calc ('!':_:rest) level result garbage =  calc rest level result garbage -- the skip operator needs to fetch with highest priority
-calc ('>':rest) level result _ =  calc rest level result False -- end garbage operator before garbage catchall
+calc ('!':_:rest) level result garbage =  calc rest level result garbage -- the skip operator needs to match with highest priority
+calc ('>':rest) level result _ =  calc rest level result False -- end garbage "mode" before garbage catchall
 calc (_:rest) level result True = calc rest level result True -- catch all chars while in garbage "mode"
 calc ('{':rest) level result False = calc rest (level + 1) result False  -- increase level
 calc ('}':rest) level result False = calc rest (level - 1) (result + level) False -- decrease level but increase the result
